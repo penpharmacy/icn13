@@ -68,7 +68,7 @@
     <div class="row g-2 mb-3">
         <div class="col-md-3"><div class="dash-card"><div class="dash-title">HW Overall</div><div class="dash-value text-primary" id="hw_val">0%</div><div class="dash-fraction" id="hw_frac">(0/0)</div></div></div>
         <div class="col-md-3"><div class="dash-card"><div class="dash-title">HR Overall</div><div class="dash-value text-info" id="hr_val">0%</div><div class="dash-fraction" id="hr_frac">(0/0)</div></div></div>
-        <div class="col-md-3"><div class="dash-card"><div class="dash-title">อัตราการทำความสะอาดมือภาพรวม(HW+HRทั้ง5moment)</div><div class="dash-value text-success" id="comp_val">0%</div><div class="dash-fraction" id="comp_frac">(0/0)</div></div></div>
+        <div class="col-md-3"><div class="dash-card"><div class="dash-title">HW+HR Overall)</div><div class="dash-value text-success" id="comp_val">0%</div><div class="dash-fraction" id="comp_frac">(0/0)</div></div></div>
         <div class="col-md-3"><div class="dash-card"><div class="dash-title">ความพร้อมอุปกรณ์รวม</div><div class="dash-value text-warning" id="equip_val">0%</div><div class="dash-fraction" id="equip_frac">(0/0)</div></div></div>
     </div>
 
@@ -91,7 +91,7 @@
                     <thead class="table-light">
                         <tr>
                             <th class="text-start">Moment</th>
-                            <th class="table-success">HW + HR (Compliance %)</th>
+                            <th class="table-success">HW + HR (%)</th>
                             <th>HW (%)</th><th>HR (%)</th><th>ไม่ล้างมือ (%)</th><th>สวมถุงมือ (%)</th>
                         </tr>
                     </thead>
@@ -114,11 +114,11 @@
                             <th colspan="4" class="head-m">M5: หลังสัมผัสสิ่งรอบตัวผู้ป่วย</th>
                         </tr>
                         <tr>
-                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
-                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
-                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
-                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
-                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่ล้างมือ</th><th class="head-glove">สวมถุงมือ</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่ล้างมือ</th><th class="head-glove">สวมถุงมือ</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่ล้างมือ</th><th class="head-glove">สวมถุงมือ</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่ล้างมือ</th><th class="head-glove">สวมถุงมือ</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่ล้างมือ</th><th class="head-glove">สวมถุงมือ</th>
                         </tr>
                     </thead>
                     <tbody id="matrixTableBody"></tbody>
@@ -140,11 +140,11 @@
                             <th colspan="4" class="head-m" style="background-color: #455a64 !important;">M5</th>
                         </tr>
                         <tr>
-                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
-                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
-                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
-                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
-                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่ล้างมือ</th><th class="head-glove">สวมถุงมือ</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่ล้างมือ</th><th class="head-glove">สวมถุงมือ</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่ล้างมือ</th><th class="head-glove">สวมถุงมือ</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่ล้างมือ</th><th class="head-glove">สวมถุงมือ</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่ล้างมือ</th><th class="head-glove">สวมถุงมือ</th>
                         </tr>
                     </thead>
                     <tbody id="matrixRoleTableBody"></tbody>
