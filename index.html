@@ -22,11 +22,19 @@
         h6.chart-label { font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; color: #555; height: 2.4em; display: flex; align-items: center; justify-content: center; text-align: center; }
         .table { font-size: 0.82rem; }
         @media print { .no-print { display: none !important; } .card { box-shadow: none; border: 1px solid #ddd; } }
-        .table-matrix thead th { background-color: #2c3e50; color: white; border-color: #34495e; font-size: 0.7rem; padding: 4px 2px; }
-        .table-matrix td { padding: 4px 1px !important; vertical-align: middle; line-height: 1.1; font-size: 0.7rem; }
+
+        /* Matrix Table Styling */
+        .table-matrix thead th { vertical-align: middle; border-color: #dee2e6; font-size: 0.75rem; }
+        .head-m { background-color: #2c3e50 !important; color: white !important; }
+        .head-hw { background-color: #e8f5e9 !important; color: #2e7d32; }
+        .head-hr { background-color: #e3f2fd !important; color: #1565c0; }
+        .head-none { background-color: #ffebee !important; color: #c62828; }
+        .head-glove { background-color: #fffde7 !important; color: #f9a825; }
+        
+        .table-matrix td { padding: 6px 2px !important; vertical-align: middle; line-height: 1.2; font-size: 0.72rem; border-color: #f0f0f0; }
         .cell-pct { font-weight: bold; display: block; }
-        .cell-frac { font-size: 0.6rem; color: #777; display: block; }
-        .bg-header-light { background-color: #f8f9fa; font-weight: bold; }
+        .cell-frac { font-size: 0.62rem; color: #999; display: block; }
+        .bg-label { background-color: #f8f9fa; font-weight: bold; border-right: 2px solid #ddd !important; }
     </style>
 </head>
 <body>
@@ -60,14 +68,14 @@
     <div class="row g-2 mb-3">
         <div class="col-md-3"><div class="dash-card"><div class="dash-title">HW Overall</div><div class="dash-value text-primary" id="hw_val">0%</div><div class="dash-fraction" id="hw_frac">(0/0)</div></div></div>
         <div class="col-md-3"><div class="dash-card"><div class="dash-title">HR Overall</div><div class="dash-value text-info" id="hr_val">0%</div><div class="dash-fraction" id="hr_frac">(0/0)</div></div></div>
-        <div class="col-md-3"><div class="dash-card"><div class="dash-title">Compliance Rate</div><div class="dash-value text-success" id="comp_val">0%</div><div class="dash-fraction" id="comp_frac">(0/0)</div></div></div>
+        <div class="col-md-3"><div class="dash-card"><div class="dash-title">อัตราการทำความสะอาดมือภาพรวม(HW+HRทั้ง5moment)</div><div class="dash-value text-success" id="comp_val">0%</div><div class="dash-fraction" id="comp_frac">(0/0)</div></div></div>
         <div class="col-md-3"><div class="dash-card"><div class="dash-title">ความพร้อมอุปกรณ์รวม</div><div class="dash-value text-warning" id="equip_val">0%</div><div class="dash-fraction" id="equip_frac">(0/0)</div></div></div>
     </div>
 
     <div class="row g-2 mb-3">
-        <div class="col-md-4"><div class="card p-2 h-100"><h6 class="chart-label">สัดส่วนวิธีปฏิบัติภาพรวม</h6><div class="chart-container"><canvas id="pieChart"></canvas></div></div></div>
-        <div class="col-md-4"><div class="card p-2 h-100"><h6 class="chart-label">5 Moments (HR+HW)(%)</h6><div class="chart-container"><canvas id="momentChart"></canvas></div></div></div>
-        <div class="col-md-4"><div class="card p-2 h-100"><h6 class="chart-label">แนวโน้มความร่วมมือรายเดือน</h6><div class="chart-container"><canvas id="trendChart"></canvas></div></div></div>
+        <div class="col-md-4"><div class="card p-2 h-100"><h6 class="chart-label">สัดส่วนการทำความสะอาดมือภาพรวม</h6><div class="chart-container"><canvas id="pieChart"></canvas></div></div></div>
+        <div class="col-md-4"><div class="card p-2 h-100"><h6 class="chart-label">อัตราทำความสะอาดมือแต่ละโอกาส 5 Moments (HR+HW)(%)</h6><div class="chart-container"><canvas id="momentChart"></canvas></div></div></div>
+        <div class="col-md-4"><div class="card p-2 h-100"><h6 class="chart-label">แนวโน้มความร่วมมือ(HW+HR)รายเดือน</h6><div class="chart-container"><canvas id="trendChart"></canvas></div></div></div>
     </div>
 
     <div class="text-end mb-4 no-print">
@@ -84,7 +92,7 @@
                         <tr>
                             <th class="text-start">Moment</th>
                             <th class="table-success">HW + HR (Compliance %)</th>
-                            <th>HW (%)</th><th>HR (%)</th><th>ไม่ล้าง (%)</th><th>ถุงมือ (%)</th>
+                            <th>HW (%)</th><th>HR (%)</th><th>ไม่ล้างมือ (%)</th><th>สวมถุงมือ (%)</th>
                         </tr>
                     </thead>
                     <tbody id="momentTableBody"></tbody>
@@ -93,24 +101,24 @@
         </div>
 
         <div class="card p-3 mb-3">
-            <h5 class="section-title">สรุป 5 Moments และวิธีการปฏิบัติแยกตามแผนก</h5>
+            <h5 class="section-title">อัตราทำความสะอาดมือแต่ละโอกาส แยกตามMoments และแยกตามแผนก</h5>
             <div class="table-responsive">
-                <table class="table table-bordered table-sm text-center align-middle table-matrix" style="min-width:1100px;">
+                <table class="table table-bordered table-sm text-center align-middle table-matrix" style="min-width:1150px;">
                     <thead>
                         <tr>
-                            <th rowspan="2" class="align-middle">แผนก</th>
-                            <th colspan="4">M1: ก่อนสัมผัส</th>
-                            <th colspan="4">M2: ก่อนหัตถการ</th>
-                            <th colspan="4">M3: หลังสารคัดหลั่ง</th>
-                            <th colspan="4">M4: หลังสัมผัสผู้ป่วย</th>
-                            <th colspan="4">M5: หลังสิ่งแวดล้อม</th>
+                            <th rowspan="2" class="align-middle bg-label" style="width: 120px;">แผนก</th>
+                            <th colspan="4" class="head-m">M1: ก่อนสัมผัสผู้ป่วย</th>
+                            <th colspan="4" class="head-m">M2: ก่อนทำหัตถการปลอดเชื้อ</th>
+                            <th colspan="4" class="head-m">M3: หลังสัมผัสสารคัดหลั่งผู้ป่วย</th>
+                            <th colspan="4" class="head-m">M4: หลังสัมผัสผู้ป่วย</th>
+                            <th colspan="4" class="head-m">M5: หลังสัมผัสสิ่งรอบตัวผู้ป่วย</th>
                         </tr>
                         <tr>
-                            <th>HW</th><th>HR</th><th>ไม่</th><th>ถุง</th>
-                            <th>HW</th><th>HR</th><th>ไม่</th><th>ถุง</th>
-                            <th>HW</th><th>HR</th><th>ไม่</th><th>ถุง</th>
-                            <th>HW</th><th>HR</th><th>ไม่</th><th>ถุง</th>
-                            <th>HW</th><th>HR</th><th>ไม่</th><th>ถุง</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
                         </tr>
                     </thead>
                     <tbody id="matrixTableBody"></tbody>
@@ -119,20 +127,24 @@
         </div>
 
         <div class="card p-3 mb-3">
-            <h5 class="section-title">สรุป 5 Moments และวิธีการปฏิบัติแยกตามวิชาชีพ</h5>
+            <h5 class="section-title">อัตราทำความสะอาดมือแต่ละโอกาส แยกตามMoments และแยกตามวิชาชีพ</h5>
             <div class="table-responsive">
-                <table class="table table-bordered table-sm text-center align-middle table-matrix" style="min-width:1100px;">
-                    <thead class="table-secondary text-white">
+                <table class="table table-bordered table-sm text-center align-middle table-matrix" style="min-width:1150px;">
+                    <thead>
                         <tr>
-                            <th rowspan="2" class="align-middle" style="background-color: #4a5568;">วิชาชีพ</th>
-                            <th colspan="4">M1</th><th colspan="4">M2</th><th colspan="4">M3</th><th colspan="4">M4</th><th colspan="4">M5</th>
+                            <th rowspan="2" class="align-middle bg-label" style="width: 120px; background-color: #e9ecef;">วิชาชีพ</th>
+                            <th colspan="4" class="head-m" style="background-color: #455a64 !important;">M1</th>
+                            <th colspan="4" class="head-m" style="background-color: #455a64 !important;">M2</th>
+                            <th colspan="4" class="head-m" style="background-color: #455a64 !important;">M3</th>
+                            <th colspan="4" class="head-m" style="background-color: #455a64 !important;">M4</th>
+                            <th colspan="4" class="head-m" style="background-color: #455a64 !important;">M5</th>
                         </tr>
                         <tr>
-                            <th>HW</th><th>HR</th><th>ไม่</th><th>ถุง</th>
-                            <th>HW</th><th>HR</th><th>ไม่</th><th>ถุง</th>
-                            <th>HW</th><th>HR</th><th>ไม่</th><th>ถุง</th>
-                            <th>HW</th><th>HR</th><th>ไม่</th><th>ถุง</th>
-                            <th>HW</th><th>HR</th><th>ไม่</th><th>ถุง</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
+                            <th class="head-hw">HW</th><th class="head-hr">HR</th><th class="head-none">ไม่</th><th class="head-glove">ถุง</th>
                         </tr>
                     </thead>
                     <tbody id="matrixRoleTableBody"></tbody>
@@ -141,7 +153,7 @@
         </div>
 
         <div class="card p-3 mb-3">
-            <h5 class="section-title">ความพร้อมใช้อุปกรณ์และสรุปกลุ่มน้ำยาแยกตามแผนก (%)</h5>
+            <h5 class="section-title">ความพร้อมใช้อุปกรณ์แยกตามแผนก (%)</h5>
             <div class="table-responsive">
                 <table class="table table-bordered table-sm text-center align-middle">
                     <thead class="table-light">
@@ -158,8 +170,8 @@
         </div>
 
         <div class="row g-2">
-            <div class="col-md-6"><div class="card p-3"><h5 class="section-title">ภาพรวมแยกตามแผนก (%)</h5><table class="table table-bordered table-sm text-center"><thead class="table-light"><tr><th>แผนก</th><th>HW</th><th>HR</th><th>ไม่ล้าง</th><th>ถุงมือ</th></tr></thead><tbody id="deptTableBody"></tbody></table></div></div>
-            <div class="col-md-6"><div class="card p-3"><h5 class="section-title">ภาพรวมแยกตามวิชาชีพ (%)</h5><table class="table table-bordered table-sm text-center"><thead class="table-light"><tr><th>วิชาชีพ</th><th>HW</th><th>HR</th><th>ไม่ล้าง</th><th>ถุงมือ</th></tr></thead><tbody id="roleTableBody"></tbody></table></div></div>
+            <div class="col-md-6"><div class="card p-3"><h5 class="section-title">อัตราทำความสะอาดมือภาพรวมแยกตามแผนก (%)</h5><table class="table table-bordered table-sm text-center"><thead class="table-light"><tr><th>แผนก</th><th>HW</th><th>HR</th><th>ไม่ล้าง</th><th>ถุงมือ</th></tr></thead><tbody id="deptTableBody"></tbody></table></div></div>
+            <div class="col-md-6"><div class="card p-3"><h5 class="section-title">อัตราทำความสะอาดมือภาพรวมแยกตามวิชาชีพ (%)</h5><table class="table table-bordered table-sm text-center"><thead class="table-light"><tr><th>วิชาชีพ</th><th>HW</th><th>HR</th><th>ไม่ล้าง</th><th>ถุงมือ</th></tr></thead><tbody id="roleTableBody"></tbody></table></div></div>
         </div>
     </div>
 </div>
@@ -206,7 +218,7 @@
 
     function getPercentColor(pct) {
         let val = parseFloat(pct);
-        if (val === 0) return 'text-danger fw-bold'; 
+        if (val === 0) return 'text-muted opacity-25'; 
         if (val >= 80) return 'text-success fw-bold';
         return ''; 
     }
@@ -256,20 +268,20 @@
 
         keys.forEach(keyVal => {
             const filteredData = data.filter(d => d[field] === keyVal);
-            let row = `<tr><td class="text-start ps-2 fw-bold bg-light">${keyVal}</td>`;
+            let row = `<tr><td class="text-start ps-2 bg-label">${keyVal}</td>`;
             
             for (let mIdx = 0; mIdx < 5; mIdx++) {
                 const mTotal = filteredData.filter(d => d.m && d.m[mIdx] && d.m[mIdx] !== "").length;
                 behaviors.forEach(beh => {
                     const count = filteredData.filter(d => d.m && d.m[mIdx] === beh).length;
-                    if (mTotal > 0) {
+                    if (mTotal > 0 && count > 0) {
                         const pct = ((count / mTotal) * 100).toFixed(1);
                         row += `<td>
                             <span class="cell-pct ${getPercentColor(pct)}">${pct}%</span>
                             <span class="cell-frac">(${count}/${mTotal})</span>
                         </td>`;
                     } else {
-                        row += `<td class="text-muted small">-</td>`;
+                        row += `<td></td>`; // หากเป็น 0 หรือไม่มีข้อมูล ให้ว่างไว้
                     }
                 });
             }
@@ -289,12 +301,16 @@
             let deptSum = 0;
             for(let i=0; i<7; i++) {
                 let score = f.reduce((acc, d) => acc + (d.equips ? d.equips[i] : 0), 0);
-                let pct = ((score / f.length) * 100).toFixed(1);
-                deptSum += parseFloat(pct);
-                row += `<td>${pct}%<br><small class="text-muted">(${score}/${f.length})</small></td>`;
+                if (score > 0) {
+                    let pct = ((score / f.length) * 100).toFixed(1);
+                    deptSum += parseFloat(pct);
+                    row += `<td>${pct}%<br><small class="text-muted">(${score}/${f.length})</small></td>`;
+                } else {
+                    row += `<td></td>`;
+                }
             }
             let avg = (deptSum / 7).toFixed(1);
-            row += `<td class="table-primary fw-bold">${avg}%</td></tr>`;
+            row += `<td class="table-primary fw-bold">${avg > 0 ? avg + '%' : ''}</td></tr>`;
             body.innerHTML += row;
         });
     }
@@ -302,19 +318,19 @@
     function renderTables(data, mStats) {
         const mBody = document.getElementById('momentTableBody'); 
         mBody.innerHTML = '';
-        const momentLabels = ["ก่อนสัมผัสผู้ป่วย", "ก่อนทำหัตถการ", "หลังสารคัดหลั่ง", "หลังสัมผัสผู้ป่วย", "หลังสัมผัสสิ่งรอบตัว"];
+        const momentLabels = ["ก่อนสัมผัสผู้ป่วย", "ก่อนทำหัตถการปลอดเชื้อ", "หลังสัมผัสสารคัดหลั่งผู้ป่วย", "หลังสัมผัสผู้ป่วย", "หลังสัมผัสสิ่งรอบตัวผู้ป่วย"];
         
         momentLabels.forEach((l, idx) => {
             const m = mStats[idx];
             const total = m.hw + m.hr + m.none + m.glove;
             const fmt = (c) => { 
-                if (total === 0) return "-"; 
+                if (total === 0 || c === 0) return ""; 
                 let pct = ((c/total)*100).toFixed(1); 
                 return `<span class="${getPercentColor(pct)}">${pct}%</span> <br><small class="text-muted">(${c}/${total})</small>`; 
             };
             const hwHrSum = m.hw + m.hr;
             const fmtTotal = () => {
-                if (total === 0) return "-";
+                if (total === 0 || hwHrSum === 0) return "";
                 let pct = ((hwHrSum / total) * 100).toFixed(1);
                 return `<span class="fw-bold text-success">${pct}%</span> <br><small class="text-muted">(${hwHrSum}/${total})</small>`;
             };
@@ -334,7 +350,7 @@
             f.forEach(d => { if(d.m) d.m.forEach(v => { if(v) s[v]++; }); });
             const total = s.HW + s.HR + s.None + s.Glove;
             const fmt = (c) => { 
-                if (total === 0) return "0%"; 
+                if (total === 0 || c === 0) return ""; 
                 let pct = ((c/total)*100).toFixed(1); 
                 return `<span class="${getPercentColor(pct)}">${pct}%</span> <br><small class="text-muted">(${c}/${total})</small>`; 
             };
@@ -342,6 +358,7 @@
         });
     }
 
+    // Charts (เหมือนเดิม)
     function drawPie(hw, hr, none, glove) { if(charts.pie) charts.pie.destroy(); charts.pie = new Chart(document.getElementById('pieChart'), { type: 'doughnut', data: { labels: ['HW', 'HR', 'ไม่ล้างมือ', 'สวมถุงมือ'], datasets: [{ data: [hw, hr, none, glove], backgroundColor: ['#2ecc71', '#3498db', '#e74c3c', '#f1c40f'] }] }, options: { maintainAspectRatio: false } }); }
     function drawMomentBar(mStats) { 
         if(charts.moment) charts.moment.destroy(); 
