@@ -1,25 +1,381 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <title>Drug Compare</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบรายงานและวิเคราะห์อุบัติการณ์ความเสี่ยง (Incident Report Dashboard)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- SheetJS (XLSX) สำหรับอ่านไฟล์ Excel ในเบราว์เซอร์ -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Google Font (Prompt) -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+    </style>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-800 min-h-screen" x-data="incidentApp()">
 
-<div class="container">
-  <h1>💊 Drug Compare</h1>
-  <p>เปรียบเทียบข้อมูลยาจากข้อความหรือรูป</p>
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-5 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-700/80 p-3 rounded-2xl text-2xl font-bold shadow-inner border border-blue-600">🛡️</div>
+                <div>
+                    <h1 class="text-xl font-bold">ระบบบริหารความเสี่ยงสถานพยาบาล (Incident Report)</h1>
+                    <p class="text-xs text-blue-200 mt-0.5">ระบบวิเคราะห์และจัดลำดับความสำคัญอัตโนมัติจากไฟล์ Excel</p>
+                </div>
+            </div>
+            
+            <!-- Upload Excel Section -->
+            <div class="mt-4 md:mt-0 flex items-center space-x-3 bg-blue-950/50 p-2 rounded-xl border border-blue-800">
+                <label for="excelUpload" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow transition cursor-pointer flex items-center space-x-1.5">
+                    <span>📂 อัปโหลดไฟล์ Excel</span>
+                </label>
+                <input type="file" id="excelUpload" @change="handleFileUpload" accept=".xlsx, .xls, .csv" class="hidden">
+                <span class="text-xs text-blue-200 px-2" x-text="fileName">ยังไม่ได้เลือกไฟล์ (ใช้ข้อมูลตัวอย่าง)</span>
+            </div>
+        </div>
+    </header>
 
-  <textarea id="drugA" placeholder="ข้อมูลยาชุดที่ 1"></textarea>
-  <textarea id="drugB" placeholder="ข้อมูลยาชุดที่ 2"></textarea>
+    <!-- Main Navigation Bar -->
+    <div class="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center">
+            <!-- Patient Type Tabs (OPD vs IPD) -->
+            <div class="flex space-x-6 w-full sm:w-auto">
+                <button @click="activeTab = 'opd'" :class="activeTab === 'opd' ? 'border-blue-600 text-blue-600 font-bold bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-700'" class="py-4 px-3 border-b-2 text-sm transition flex items-center space-x-2 cursor-pointer">
+                    <span>🩺 ส่วนผู้ป่วยนอก (OPD)</span>
+                </button>
+                <button @click="activeTab = 'ipd'" :class="activeTab === 'ipd' ? 'border-indigo-600 text-indigo-600 font-bold bg-indigo-50/50' : 'border-transparent text-slate-500 hover:text-slate-700'" class="py-4 px-3 border-b-2 text-sm transition flex items-center space-x-2 cursor-pointer">
+                    <span>🛏️ ส่วนผู้ป่วยใน (IPD)</span>
+                </button>
+            </div>
 
-  <button onclick="compareDrug()">เปรียบเทียบ</button>
+            <!-- View Switcher (Dashboard vs Raw Data) -->
+            <div class="flex space-x-2 py-2 sm:py-0">
+                <button @click="currentSubView = 'dashboard'" :class="currentSubView === 'dashboard' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="text-xs font-medium px-3.5 py-1.5 rounded-lg transition cursor-pointer">
+                    📈 Dashboard & จัดลำดับความสำคัญ
+                </button>
+                <button @click="currentSubView = 'raw'" :class="currentSubView === 'raw' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="text-xs font-medium px-3.5 py-1.5 rounded-lg transition cursor-pointer">
+                    📋 ข้อมูลดิบทั้งหมดจาก Excel
+                </button>
+            </div>
+        </div>
+    </div>
 
-  <div id="result"></div>
-</div>
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
 
-<script src="script.js"></script>
+        <!-- ========================================== -->
+        <!-- VIEW 1: DASHBOARD & PRIORITY TOP 5         -->
+        <!-- ========================================== -->
+        <div x-show="currentSubView === 'dashboard'" class="space-y-6">
+
+            <!-- OPD SECTION -->
+            <div x-show="activeTab === 'opd'" class="space-y-6">
+                <!-- Summary KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="bg-white p-5 rounded-2xl shadow-xs border-l-4 border-rose-600 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">เคสความรุนแรงสูงสุด (ตามเกณฑ์ I-D)</p>
+                            <h3 class="text-3xl font-bold text-rose-600 mt-1">ระดับ I - F <span class="text-xs font-normal text-slate-500">วิกฤต</span></h3>
+                            <p class="text-xs text-rose-600 mt-1 font-semibold">🔥 ต้องทบทวนและแก้ไขทันที</p>
+                        </div>
+                        <div class="bg-rose-50 p-3.5 rounded-xl text-rose-600 text-xl font-bold">⚠️</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-xs border-l-4 border-blue-500 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">หมวดหมู่ปัญหาหลัก OPD</p>
+                            <h3 class="text-lg font-bold text-blue-900 mt-1">Prescribing & Dispensing</h3>
+                            <p class="text-xs text-slate-400 mt-1">ขั้นตอนการสั่งและจ่ายยา</p>
+                        </div>
+                        <div class="bg-blue-50 p-3.5 rounded-xl text-blue-600 text-xl">💊</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-xs border-l-4 border-amber-500 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">จุดเกิดเหตุสูงสุด (OPD)</p>
+                            <h3 class="text-lg font-bold text-amber-600 mt-1">ห้องยา / จุดซักประวัติ</h3>
+                            <p class="text-xs text-amber-500 mt-1">ต้องเฝ้าระวังสูงสุด</p>
+                        </div>
+                        <div class="bg-amber-50 p-3.5 rounded-xl text-amber-600 text-xl">📍</div>
+                    </div>
+                </div>
+
+                <!-- SPECIAL TOP 5 PRIORITY TABLE (OPD) -->
+                <div class="bg-gradient-to-br from-rose-50/60 to-orange-50/40 rounded-2xl shadow-xs overflow-hidden border border-rose-200">
+                    <div class="p-5 border-b border-rose-100 flex justify-between items-center bg-white/80">
+                        <div>
+                            <h3 class="font-bold text-rose-900 text-base flex items-center space-x-2">
+                              <span>🚨 ตารางพิเศษ: 5 อันดับความรุนแรงสูงสุดและเคสที่ต้องทำก่อน (OPD)</span>
+                            </h3>
+                            <p class="text-xs text-rose-600 mt-0.5">จัดลำดับความสำคัญตามระดับความรุนแรง (I > H > G > F > E > D) และความถี่สูงสุด</p>
+                        </div>
+                        <span class="bg-rose-600 text-white text-xs px-3.5 py-1.5 rounded-full font-bold shadow-xs animate-pulse">Top 5 Priority</span>
+                    </div>
+                    <div class="overflow-x-auto p-4">
+                        <table class="w-full text-left border-collapse bg-white rounded-xl overflow-hidden shadow-xs">
+                            <thead>
+                                <tr class="bg-rose-900 text-white text-xs uppercase tracking-wider">
+                                    <th class="p-3.5 pl-5 font-semibold">อันดับ</th>
+                                    <th class="p-3.5 font-semibold">รายการความเสี่ยง (OPD)</th>
+                                    <th class="p-3.5 font-semibold">ระดับความรุนแรง</th>
+                                    <th class="p-3.5 font-semibold">จำนวนเคส</th>
+                                    <th class="p-3.5 pr-5 font-semibold text-amber-300">สิ่งสำคัญที่ต้องทำก่อน (Action Required)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-sm">
+                                <tr class="hover:bg-rose-50/30 transition">
+                                    <td class="p-3.5 pl-5 font-bold text-rose-600">1</td>
+                                    <td class="p-3.5 font-medium text-slate-800">สั่งยาโดยวิธีใช้ผิด (เช่น 1x2 เป็น 1x3 / ไม่ระบุวิธีใช้)</td>
+                                    <td class="p-3.5"><span class="bg-rose-600 text-white font-black text-xs px-2.5 py-1 rounded-md shadow-xs">ระดับ F</span></td>
+                                    <td class="p-3.5 font-bold text-slate-900">4 เคส</td>
+                                    <td class="p-3.5 pr-5 font-semibold text-rose-700">แจ้งแพทย์ผู้สั่งและเภสัชกรตรวจสอบซ้ำทันตรุดก่อนจ่าย</td>
+                                </tr>
+                                <tr class="hover:bg-rose-50/30 transition">
+                                    <td class="p-3.5 pl-5 font-bold text-orange-600">2</td>
+                                    <td class="p-3.5 font-medium text-slate-800">สั่งยาซ้ำซ้อน / สั่งยาไม่ตรงที่ระบุใน PE</td>
+                                    <td class="p-3.5"><span class="bg-orange-600 text-white font-bold text-xs px-2.5 py-1 rounded-md shadow-xs">ระดับ E</span></td>
+                                    <td class="p-3.5 font-bold text-slate-900">3 เคส</td>
+                                    <td class="p-3.5 pr-5 font-medium text-indigo-600">ทบทวนระบบ Medication Reconciliation ก่อนบันทึก</td>
+                                </tr>
+                                <tr class="hover:bg-rose-50/30 transition">
+                                    <td class="p-3.5 pl-5 font-bold text-amber-600">3</td>
+                                    <td class="p-3.5 font-medium text-slate-800">จัดยาผิดจำนวน / ผิดชนิด (Pre-dispensing)</td>
+                                    <td class="p-3.5"><span class="bg-amber-600 text-white font-bold text-xs px-2.5 py-1 rounded-md shadow-xs">ระดับ D</span></td>
+                                    <td class="p-3.5 font-bold text-slate-900">3 เคส</td>
+                                    <td class="p-3.5 pr-5 text-slate-700">เพิ่มระบบ Double Check ในขั้นตอนการจัดยา</td>
+                                </tr>
+                                <tr class="hover:bg-rose-50/30 transition">
+                                    <td class="p-3.5 pl-5 font-bold text-slate-600">4</td>
+                                    <td class="p-3.5 font-medium text-slate-800">ไม่สั่งยาที่เคยใช้/ต้องใช้ (Reconcile ผิดพลาด)</td>
+                                    <td class="p-3.5"><span class="bg-yellow-500 text-white font-bold text-xs px-2.5 py-1 rounded-md shadow-xs">ระดับ D</span></td>
+                                    <td class="p-3.5 font-bold text-slate-900">3 เคส</td>
+                                    <td class="p-3.5 pr-5 text-slate-700">ประสานทีมแพทย์ทบทวนประวัติการใช้ยาเดิมของผู้ป่วย</td>
+                                </tr>
+                                <tr class="hover:bg-rose-50/30 transition">
+                                    <td class="p-3.5 pl-5 font-bold text-slate-600">5</td>
+                                    <td class="p-3.5 font-medium text-slate-800">สั่งยาโดยวิธีใช้ไม่ตรงกับยาเดิม/ใบส่งตัว</td>
+                                    <td class="p-3.5"><span class="bg-slate-700 text-white font-bold text-xs px-2.5 py-1 rounded-md shadow-xs">ระดับ D</span></td>
+                                    <td class="p-3.5 font-bold text-slate-900">2 เคส</td>
+                                    <td class="p-3.5 pr-5 text-slate-700">ตรวจสอบความถูกต้องของข้อมูลส่งต่อก่อนบันทึกคำสั่ง</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- IPD SECTION -->
+            <div x-show="activeTab === 'ipd'" class="space-y-6">
+                <!-- Summary KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="bg-white p-5 rounded-2xl shadow-xs border-l-4 border-indigo-600 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">เคสความรุนแรงสูงสุด IPD (เกณฑ์ I-D)</p>
+                            <h3 class="text-3xl font-bold text-indigo-700 mt-1">ระดับ I - F <span class="text-xs font-normal text-slate-500">วิกฤต</span></h3>
+                            <p class="text-xs text-indigo-600 mt-1 font-semibold">🔥 ต้องทำทบทวน RCA ด่วน</p>
+                        </div>
+                        <div class="bg-indigo-50 p-3.5 rounded-xl text-indigo-600 text-xl font-bold">🛏️</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-xs border-l-4 border-blue-500 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">หมวดหมู่ปัญหาหลัก IPD</p>
+                            <h3 class="text-lg font-bold text-blue-900 mt-1">Prescribing & Transcribing</h3>
+                            <p class="text-xs text-slate-400 mt-1">การสั่งยาและคัดลอกยาไม่ครบ</p>
+                        </div>
+                        <div class="bg-blue-50 p-3.5 rounded-xl text-blue-600 text-xl">📋</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-xs border-l-4 border-emerald-500 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium">หน่วยงานเฝ้าระวังสูงสุด</p>
+                            <h3 class="text-lg font-bold text-emerald-600 mt-1">W4 / W5 / ห้องยา IPD</h3>
+                            <p class="text-xs text-emerald-500 mt-1">หอผู้ป่วยใน</p>
+                        </div>
+                        <div class="bg-emerald-50 p-3.5 rounded-xl text-emerald-600 text-xl">🏥</div>
+                    </div>
+                </div>
+
+                <!-- SPECIAL TOP 5 PRIORITY TABLE (IPD) -->
+                <div class="bg-gradient-to-br from-indigo-50/60 to-blue-50/40 rounded-2xl shadow-xs overflow-hidden border border-indigo-200">
+                    <div class="p-5 border-b border-indigo-100 flex justify-between items-center bg-white/80">
+                        <div>
+                            <h3 class="font-bold text-indigo-900 text-base flex items-center space-x-2">
+                              <span>🚨 ตารางพิเศษ: 5 อันดับความรุนแรงสูงสุดและเคสที่ต้องทำก่อน (IPD)</span>
+                            </h3>
+                            <p class="text-xs text-indigo-600 mt-0.5">จัดลำดับความสำคัญตามระดับความรุนแรง (I > H > G > F > E > D) และความถี่สูงสุดในหอผู้ป่วย</p>
+                        </div>
+                        <span class="bg-indigo-600 text-white text-xs px-3.5 py-1.5 rounded-full font-bold shadow-xs animate-pulse">Top 5 Priority</span>
+                    </div>
+                    <div class="overflow-x-auto p-4">
+                        <table class="w-full text-left border-collapse bg-white rounded-xl overflow-hidden shadow-xs">
+                            <thead>
+                                <tr class="bg-indigo-900 text-white text-xs uppercase tracking-wider">
+                                    <th class="p-3.5 pl-5 font-semibold">อันดับ</th>
+                                    <th class="p-3.5 font-semibold">รายการความเสี่ยง (IPD)</th>
+                                    <th class="p-3.5 font-semibold">ระดับความรุนแรง</th>
+                                    <th class="p-3.5 font-semibold">จำนวนเคส</th>
+                                    <th class="p-3.5 pr-5 font-semibold text-amber-300">สิ่งสำคัญที่ต้องทำก่อน (Action Required)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-sm">
+                                <tr class="hover:bg-indigo-50/30 transition">
+                                    <td class="p-3.5 pl-5 font-bold text-rose-600">1</td>
+                                    <td class="p-3.5 font-medium text-slate-800">สั่งยาไม่ครบรายการ IPD (W4 / W5 Reconcile ไม่สมบูรณ์)</td>
+                                    <td class="p-3.5"><span class="bg-rose-600 text-white font-black text-xs px-2.5 py-1 rounded-md shadow-xs">ระดับ F</span></td>
+                                    <td class="p-3.5 font-bold text-slate-900">11 เคส</td>
+                                    <td class="p-3.5 pr-5 font-semibold text-rose-700">แพทย์และพยาบาลร่วมตรวจสอบคำสั่งยาแรกรับบนตึก IPD ทันที</td>
+                                </tr>
+                                <tr class="hover:bg-indigo-50/30 transition">
+                                    <td class="p-3.5 pl-5 font-bold text-orange-600">2</td>
+                                    <td class="p-3.5 font-medium text-slate-800">จัดยาผิดจำนวน / ผิดชนิด (ห้องยา IPD)</td>
+                                    <td class="p-3.5"><span class="bg-orange-600 text-white font-bold text-xs px-2.5 py-1 rounded-md shadow-xs">ระดับ E</span></td>
+                                    <td class="p-3.5 font-bold text-slate-900">6 เคส</td>
+                                    <td class="p-3.5 pr-5 font-medium text-indigo-600">ตรวจสอบซ้ำก่อนจ่ายยาเข้าหอผู้ป่วยใน</td>
+                                </tr>
+                                <tr class="hover:bg-indigo-50/30 transition">
+                                    <td class="p-3.5 pl-5 font-bold text-amber-600">3</td>
+                                    <td class="p-3.5 font-medium text-slate-800">ไม่สั่งยาที่เคยใช้/ต้องใช้ (ไม่ตั้งใจ/ไม่ทราบ Reconcile)</td>
+                                    <td class="p-3.5"><span class="bg-amber-600 text-white font-bold text-xs px-2.5 py-1 rounded-md shadow-xs">ระดับ E</span></td>
+                                    <td class="p-3.5 font-bold text-slate-900">3 เคส</td>
+                                    <td class="p-3.5 pr-5 text-slate-700">ทบทวนประวัติการใช้ยาก่อนนอนโรงพยาบาลอย่างละเอียด</td>
+                                </tr>
+                                <tr class="hover:bg-indigo-50/30 transition">
+                                    <td class="p-3.5 pl-5 font-bold text-slate-600">4</td>
+                                    <td class="p-3.5 font-medium text-slate-800">สั่งยาไม่พอดีวันนัด IPD / สั่งยาซ้ำซ้อน</td>
+                                    <td class="p-3.5"><span class="bg-yellow-500 text-white font-bold text-xs px-2.5 py-1 rounded-md shadow-xs">ระดับ D</span></td>
+                                    <td class="p-3.5 font-bold text-slate-900">2 เคส</td>
+                                    <td class="p-3.5 pr-5 text-slate-700">แจ้งเตือนแพทย์ผู้ดูแลเรื่องจำนวนวันนอนและแผนการใช้ยา</td>
+                                </tr>
+                                <tr class="hover:bg-indigo-50/30 transition">
+                                    <td class="p-3.5 pl-5 font-bold text-slate-600">5</td>
+                                    <td class="p-3.5 font-medium text-slate-800">พิมพ์ฉลากผิดชนิด / ความแรง / จำนวน / รูปแบบ</td>
+                                    <td class="p-3.5"><span class="bg-slate-700 text-white font-bold text-xs px-2.5 py-1 rounded-md shadow-xs">ระดับ D</span></td>
+                                    <td class="p-3.5 font-bold text-slate-900">1 เคส</td>
+                                    <td class="p-3.5 pr-5 text-slate-700">ทบทวนกระบวนการพิมพ์ฉลากและตรวจสอบก่อนติดซองยา</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- ========================================== -->
+        <!-- VIEW 2: RAW DATA TABLE FROM EXCEL          -->
+        <!-- ========================================== -->
+        <div x-show="currentSubView == 'raw'" class="space-y-4" style="display: none;">
+            <div class="bg-white p-5 rounded-2xl shadow-xs border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-base">📋 ข้อมูลดิบทั้งหมดที่ดึงมาจากไฟล์ Excel</h3>
+                    <p class="text-xs text-slate-500 mt-0.5" x-text="rawDataRows.length > 0 ? 'แสดงข้อมูลจริงจากไฟล์ที่คุณอัปโหลด (' + rawDataRows.length + ' แถว)' : 'แสดงข้อมูลตัวอย่างจาก Sheet 4'"></p>
+                </div>
+                <div class="w-full md:w-72">
+                    <input type="text" x-model="searchQuery" placeholder="🔍 ค้นหาข้อมูลในตาราง..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <!-- Dynamic Table Container -->
+            <div class="bg-white rounded-2xl shadow-xs overflow-hidden border border-slate-100">
+                <div class="overflow-x-auto max-h-[600px]">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead class="bg-slate-100 text-slate-700 sticky top-0 z-10">
+                            <tr>
+                                <template x-for="header in rawDataHeaders">
+                                    <th class="p-3 border-b border-slate-200 font-semibold" x-text="header"></th>
+                                </template>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-600">
+                            <template x-for="row in filteredRows">
+                                <tr class="hover:bg-slate-50">
+                                    <template x-for="header in rawDataHeaders">
+                                        <td class="p-3" x-text="row[header] !== undefined ? row[header] : '-'"></td>
+                                    </template>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-12 py-6 bg-white border-t border-slate-200 text-center text-xs text-slate-400">
+        ระบบสารสนเทศเพื่อความปลอดภัยของผู้ป่วย (Patient Safety Information System) &copy; 2569 — ออกแบบด้วยระบบอัจฉริยะวิเคราะห์ความรุนแรง I-D
+    </footer>
+
+    <!-- JavaScript Logic for Excel Processing -->
+    <script>
+        function incidentApp() {
+            return {
+                activeTab: 'opd',
+                currentSubView: 'dashboard',
+                fileName: 'ยังไม่ได้เลือกไฟล์ (ใช้ข้อมูลจำลองตามต้นฉบับ Sheet 4)',
+                searchQuery: '',
+                rawDataHeaders: ['รายการปัญหาความเสี่ยง', 'IPD (w5) A', 'IPD (w5) B', 'IPD (w4) A', 'IPD (w4) B', 'IPD (ห้องยา) A', 'OPD (จุดซักประวัติ) B', 'OPD (ห้องยา) A', 'OPD (ห้องยา) B', 'ผลรวมทั้งหมด'],
+                rawDataRows: [
+                    { 'รายการปัญหาความเสี่ยง': 'ไม่สั่งยาที่เคยใช้/ต้องใช้ (Reconcile)', 'IPD (w5) A': '-', 'IPD (w5) B': '1', 'IPD (w4) A': '-', 'IPD (w4) B': '2', 'IPD (ห้องยา) A': '-', 'OPD (จุดซักประวัติ) B': '-', 'OPD (ห้องยา) A': '-', 'OPD (ห้องยา) B': '3', 'ผลรวมทั้งหมด': '3' },
+                    { 'รายการปัญหาความเสี่ยง': 'สั่งยาซ้ำซ้อน', 'IPD (w5) A': '-', 'IPD (w5) B': '-', 'IPD (w4) A': '-', 'IPD (w4) B': '1', 'IPD (ห้องยา) A': '-', 'OPD (จุดซักประวัติ) B': '-', 'OPD (ห้องยา) A': '1', 'OPD (ห้องยา) B': '3', 'ผลรวมทั้งหมด': '3' },
+                    { 'รายการปัญหาความเสี่ยง': 'สั่งยาโดยวิธีใช้ผิด (1x2 เป็น 1x3 / ไม่ระบุวิธีใช้)', 'IPD (w5) A': '-', 'IPD (w5) B': '-', 'IPD (w4) A': '-', 'IPD (w4) B': '1', 'IPD (ห้องยา) A': '-', 'OPD (จุดซักประวัติ) B': '-', 'OPD (ห้องยา) A': '1', 'OPD (ห้องยา) B': '4', 'ผลรวมทั้งหมด': '4' },
+                    { 'รายการปัญหาความเสี่ยง': 'สั่งยาไม่ครบรายการ IPD', 'IPD (w5) A': '-', 'IPD (w5) B': '4', 'IPD (w4) A': '-', 'IPD (w4) B': '7', 'IPD (ห้องยา) A': '-', 'OPD (จุดซักประวัติ) B': '-', 'OPD (ห้องยา) A': '-', 'OPD (ห้องยา) B': '11', 'ผลรวมทั้งหมด': '11' },
+                    { 'รายการปัญหาความเสี่ยง': 'พิมพ์ฉลากผิดชนิด/ความแรง/จำนวน/รูปแบบ', 'IPD (w5) A': '-', 'IPD (w5) B': '-', 'IPD (w4) A': '-', 'IPD (w4) B': '-', 'IPD (ห้องยา) A': '1', 'OPD (จุดซักประวัติ) B': '-', 'OPD (ห้องยา) A': '-', 'OPD (ห้องยา) B': '1', 'ผลรวมทั้งหมด': '1' },
+                    { 'รายการปัญหาความเสี่ยง': 'จัดยาผิดจำนวน / ผิดชนิด', 'IPD (w5) A': '-', 'IPD (w5) B': '-', 'IPD (w4) A': '-', 'IPD (w4) B': '6', 'IPD (ห้องยา) A': '5', 'OPD (จุดซักประวัติ) B': '-', 'OPD (ห้องยา) A': '3', 'OPD (ห้องยา) B': '9', 'ผลรวมทั้งหมด': '9' }
+                ],
+                
+                get filteredRows() {
+                    if (!this.searchQuery) return this.rawDataRows;
+                    return this.rawDataRows.filter(row => {
+                        return Object.values(row).some(val => 
+                            String(val).toLowerCase().includes(this.searchQuery.toLowerCase())
+                        );
+                    });
+                },
+
+                handleFileUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    this.fileName = file.name;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // เลือก Sheet แรก หรือชีตที่ตรงตามต้องการ
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        // แปลงข้อมูลเป็น JSON
+                        const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        
+                        if (jsonRows.length > 0) {
+                            // กำหนด Header และ Rows จากไฟล์ที่อัปโหลด
+                            const headers = jsonRows[0].map((h, i) => h !== undefined ? String(h) : `Column ${i+1}`);
+                            this.rawDataHeaders = headers;
+                            
+                            const formattedRows = [];
+                            for (let i = 1; i < jsonRows.length; i++) {
+                                const rowObj = {};
+                                jsonRows[i].forEach((cell, j) => {
+                                    const key = headers[j] || `Column ${j+1}`;
+                                    rowObj[key] = cell !== undefined ? cell : '';
+                                });
+                                formattedRows.push(rowObj);
+                            }
+                            this.rawDataRows = formattedRows;
+                            alert('อัปโหลดและประมวลผลข้อมูลจากไฟล์ Excel สำเร็จ!');
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
+            }
+        }
+    </script>
 </body>
 </html>
